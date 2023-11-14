@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  userId    Int        @id @default(autoincrement()) @map("userId")
+  nickname  String     @unique @map("nickname")
+  password  String     @map("password")
+
+  createdAt DateTime   @default(now()) @map("createdAt")
+  updatedAt DateTime   @updatedAt  @map("updatedAt")
+
+  UserInfos    UserInfos?
+  Categories   Categories[]
+  Menus        Menus[]
+  Orders       Orders[]
+
+  @@map("Users")
+}
+
+model UserInfos {
+  userInfoId  Int       @id @default(autoincrement()) @map("userInfoId")
+  UserId      Int       @unique @map("UserId")
+  userType    String    @default("CUSTOMER") @map("userType")
+
+  createdAt   DateTime  @default(now()) @map("createdAt")
+  updatedAt   DateTime  @updatedAt  @map("updatedAt")
+
+  User        Users     @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+
+  @@map("UserInfos")
+}
+
+model Categories {
+  categoryId  Int       @id @default(autoincrement()) @map("categoryId")
+  UserId      Int       @map("UserId")
+  name        String    @map("name")
+  order       Int       @map("order")
+  author      String    @map("author")
+
+  createdAt   DateTime  @default(now()) @map("createdAt")
+  updatedAt   DateTime  @updatedAt  @map("updatedAt")
+
+  deletedAt   DateTime?  @map("deletedAt")
+
+  User        Users     @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  Menus       Menus[]
+
+  @@map("Categories")
+}
+
+model Menus {
+  menuId      Int         @id @default(autoincrement()) @map("menuId")
+  UserId      Int         @map("UserId")
+  CategoryId  Int         @map("CategoryId")
+  name        String      @map("name")
+  description String      @map("description")
+  image       String      @map("image")
+  price       Int         @map("price")
+  author      String      @map("author")
+  order       Int         @map("order")
+  status      String      @default("FOR_SALE") @map("status")
+
+  createdAt   DateTime    @default(now()) @map("createdAt")
+  updatedAt   DateTime    @updatedAt  @map("updatedAt")
+  
+  deletedAt   DateTime?   @map("deletedAt")
+
+  Users       Users       @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  Categories  Categories  @relation(fields: [CategoryId], references: [categoryId], onDelete: Cascade)
+
+  Orders      Orders[]
+
+  @@map("Menus")
+}
+
+model Orders {
+  orderId     Int     @id @default(autoincrement()) @map("orderId")
+  UserId      Int     @map("UserId")
+  MenuId      Int     @map("menuId")
+  quantity    Int     @map("quantity")
+  orderType   String  @default("PENDING")  @map("orderType")
+  sellerId    Int     @map("seller")
+
+  createdAt   DateTime  @default(now()) @map("createdAt")
+  updatedAt   DateTime  @updatedAt  @map("updatedAt")
+
+  Users       Users   @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  Menus       Menus   @relation(fields: [MenuId], references: [menuId], onDelete: Cascade)
+
+  @@map("Orders")
+}
