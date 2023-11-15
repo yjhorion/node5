@@ -13,6 +13,7 @@ const createMenues = joi.object({
   image: joi.string(),
   price: joi.number().min(1).max(1000000),
   status: joi.string().valid("FOR_SALE", "SOLD_OUT"),
+  quantity: joi.number()
 });
 
 const createCategories = joi.object({

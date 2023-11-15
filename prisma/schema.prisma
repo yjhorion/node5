@@ -64,6 +64,7 @@ model Menus {
   price       Int         @map("price")
   author      String      @map("author")
   order       Int         @map("order")
+  quantity    Int         @map("quantity")
   status      String      @default("FOR_SALE") @map("status")
 
   createdAt   DateTime    @default(now()) @map("createdAt")
@@ -86,6 +87,7 @@ model Orders {
   quantity    Int     @map("quantity")
   orderType   String  @default("PENDING")  @map("orderType")
   sellerId    Int     @map("seller")
+  totalprice  Int     @map("totalprice")
 
   createdAt   DateTime  @default(now()) @map("createdAt")
   updatedAt   DateTime  @updatedAt  @map("updatedAt")

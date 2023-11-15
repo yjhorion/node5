@@ -2,6 +2,7 @@ import express from "express";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import { prisma } from "../utils/prisma/index.js";
 import { createCategories } from "../middlewares/error.handler/joi.error.definition.js";
+import { Prisma } from "@prisma/client";
 
 const router = express.Router();
 
@@ -110,17 +111,22 @@ router.post(
         where: { order },
       });
 
-      if (currentCategory) {
-        await prisma.categories.updateMany({
-          where: { OR: [{ order: { gt: order } }, { order: order }] },
-          data: { order: { increment: 1 } },
-        });
-      }
+      await prisma.$transaction(async (tx) => {
 
-      await prisma.categories.update({
-        where: { categoryId: +categoryId },
-        data: { name, order },
-      });
+        if (currentCategory) {
+          await prisma.categories.updateMany({
+            where: { OR: [{ order: { gt: order } }, { order: order }] },
+            data: { order: { increment: 1 } },
+          });
+        }
+  
+        await prisma.categories.update({
+          where: { categoryId: +categoryId },
+          data: { name, order },
+        });
+      },{
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted
+      })
 
       return res
         .status(201)

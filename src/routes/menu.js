@@ -2,6 +2,7 @@ import express from "express";
 import { prisma } from "../utils/prisma/index.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import { createMenues } from "../middlewares/error.handler/joi.error.definition.js";
+import { Prisma } from "@prisma/client";
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.post(
     try {
       const { userId } = req.user;
       const { categoryId } = req.params;
-      const { name, description, image, price } =
+      const { name, description, image, price, quantity } =
         await createMenues.validateAsync(req.body);
 
       const isOwner = await prisma.userInfos.findFirst({
@@ -27,7 +28,7 @@ router.post(
       }
 
       const category = await prisma.categories.findFirst({
-        where: { categoryId: +categoryId },
+        where: { categoryId: +categoryId, deletedAt: null },
       });
 
       if (!category) {
@@ -47,11 +48,18 @@ router.post(
       let order = 1;
 
       const currentMenu = await prisma.menus.findFirst({
+        where : {deletedAt : null},
         orderBy: { order: "desc" },
       });
 
       if (currentMenu) {
         order = currentMenu.order + 1;
+      }
+
+      let status = "FOR_SALE"
+
+      if (quantity <= 0) {
+        status = "SOLD_OUT"
       }
 
       const menu = await prisma.menus.create({
@@ -63,7 +71,9 @@ router.post(
           image,
           price,
           author,
+          quantity,
           order,
+          status
         },
       });
       return res.status(201).json({ data: menu });
@@ -110,7 +120,7 @@ router.patch(
     try {
       const { userId } = req.user;
       const { categoryId, menuId } = req.params;
-      const { name, description, price, order, status } =
+      const { name, description, price, quantity, order } =
         await createMenues.validateAsync(req.body);
 
       const isOwner = await prisma.userInfos.findFirst({
@@ -138,20 +148,31 @@ router.patch(
       }
 
       const currentMenu = await prisma.menus.findFirst({
-        where: { order },
+        where: { order, deletedAt: null },
       });
 
-      if (currentMenu) {
-        await prisma.menus.updateMany({
-          where: { OR: [{ order: { gt: order } }, { order: order }] },
-          data: { order: { increment: 1 } },
+      await prisma.$transaction(async (tx) => {
+        
+        if (currentMenu) {
+          await prisma.menus.updateMany({
+            where: { OR: [{ order: { gt: order } }, { order: order }] },
+            data: { order: { increment: 1 } },
+          });
+        }
+  
+        let status = "FOR_SALE"
+  
+        if (!quantity) {
+          status = "SOLD_OUT"
+        }
+  
+        await prisma.menus.update({
+          where: { menuId: +menuId },
+          data: { name, description, price, quantity, order, status },
         });
-      }
-
-      await prisma.menus.update({
-        where: { menuId: +menuId },
-        data: { name, description, price, order, status },
-      });
+      },{
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted
+      })
       return res.status(201).json({ message: "메뉴 수정이 완료되었습니다" });
     } catch (error) {
       return res.status(400).json({ error: error.message });
